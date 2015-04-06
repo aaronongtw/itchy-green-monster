@@ -23,6 +23,8 @@ def calculate(userload, userdate=None, usermsg=None):
 		timeStamp = []
 		dates = []
 		reason = []
+		user = []
+		transaction = {}
 		for log in gm_logs:
 			f = gzip.open(log)
 			for line in f:
@@ -37,6 +39,17 @@ def calculate(userload, userdate=None, usermsg=None):
 					r = re.findall("['\"](\\w+.\\w+)[\"']", line)
 				else:
 					r = re.findall("(%s)" % (usermsg), line)
+				if "started" in line and "username" in line:
+					username = re.findall("username=(\S+)", line)[0]
+					transid = re.findall("txn=(\S+)", line)[0]
+					transaction[transid] = username
+					print len(transaction)
+				if "completed" in line and "username" in line:
+					username = transaction[transid]
+					user += username
+					del transaction[transid]
+				else:
+					user += "N/A"
 				if m and len(r) == 1 and len(i) == 1:
 					dates += i
 					timeStamp += m
@@ -46,19 +59,22 @@ def calculate(userload, userdate=None, usermsg=None):
 		print("--- %s seconds ---" %(time.time() - start_time))
 
 		print "Commencing DataSeries allocation"
-		index = [dates, reason]
+		index = [dates, reason, user]
 		ds = pd.Series(timeStamp, index=index)
 		print "DataSeries Allocated"
 		pupdate = raw_input("Update cPickle file? > ")
 		if pupdate in ["Y", "y"]:
 			print "Saving into Pickle File"
 			cPickle.dump( ds, open( 'log.p', 'wb'), protocol =-1) #HIGHEST PROTOCOL
-	labels = ["date", "msg", "ms"]
+	labels = ["date", "msg", "user" ,"ms"]
+	print "Saving to CSV"
 	ds.to_csv(open( 'log.csv', 'wb'),index_label=labels,header=True)
 	print "Grouping by Date"
 	dd = ds.groupby(level=0)
 	print "Grouping by Reason"
 	dr = ds.groupby(level=1)
+	print "Grouping by User"
+	du = ds.groupby(level=2)
 	print "Data Grouping Complete"
 	print "Print results, hit return. CTRL + Z to abort"
 	raw_input(">")
@@ -76,5 +92,10 @@ def calculate(userload, userdate=None, usermsg=None):
 	print dr.mean()
 	print "STD by Reason"
 	print dr.std()
+	print "MEAN by User"
+	print du.mean()
+	print "STD by User"
+	print du.std()
+	
 	
 	print("--- %s seconds ---" %(time.time() - start_time))
