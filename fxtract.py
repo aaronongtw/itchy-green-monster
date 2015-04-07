@@ -43,17 +43,16 @@ def calculate(userload, userdate=None, usermsg=None):
 					username = re.findall("username=(\S+)", line)[0]
 					transid = re.findall("txn=(\S+)", line)[0]
 					transaction[transid] = username
-					print len(transaction)
-				if "completed" in line and "username" in line:
-					username = transaction[transid]
-					user += username
-					del transaction[transid]
-				else:
-					user += "N/A"
 				if m and len(r) == 1 and len(i) == 1:
 					dates += i
 					timeStamp += m
-					reason += r
+					reason += r	
+					if "completed" in line and transid in transaction:
+						username = [transaction[transid]]
+						del transaction[transid]
+						user += username
+					else:
+						user += ["N/A"]
 					print len(timeStamp), "GRAB"
 					#, i, m, r....current observation count is 6866504
 		print("--- %s seconds ---" %(time.time() - start_time))
